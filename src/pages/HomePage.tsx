@@ -1,17 +1,35 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Brain, BarChart3, Trash2, Leaf, ArrowRight, Zap, Eye, Recycle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CameraDetection } from "@/components/CameraDetection";
+import { supabase } from "@/integrations/supabase/client";
 
 const features = [
-  { icon: Brain, title: "AI-Powered Detection", description: "Computer vision classifies waste types with 97%+ accuracy in real-time." },
+  { icon: Brain, title: "AI-Powered Detection", description: "Computer vision classifies waste types with real AI analysis in real-time." },
   { icon: Eye, title: "Smart Monitoring", description: "IoT sensors track fill levels, temperature, and bin health 24/7." },
   { icon: BarChart3, title: "Data Analytics", description: "Actionable insights on waste patterns, recycling rates, and efficiency." },
   { icon: Recycle, title: "Eco Impact", description: "Track your environmental contribution with carbon offset metrics." },
 ];
 
 export default function HomePage() {
+  const [stats, setStats] = useState({ bins: 0, detections: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const [binsRes, detectionsRes] = await Promise.all([
+        supabase.from("waste_bins").select("id", { count: "exact", head: true }),
+        supabase.from("detection_history").select("id", { count: "exact", head: true }),
+      ]);
+      setStats({
+        bins: binsRes.count || 0,
+        detections: detectionsRes.count || 0,
+      });
+    };
+    fetchStats();
+  }, []);
+
   return (
     <div className="min-h-full">
       {/* Hero */}
@@ -116,20 +134,17 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats */}
+      {/* Live Stats */}
       <section className="px-6 py-12 bg-muted/50">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-          {[
-            { val: "2,450", label: "Tons Collected" },
-            { val: "87%", label: "Recycling Rate" },
-            { val: "156", label: "Smart Bins" },
-            { val: "12", label: "Cities Covered" },
-          ].map((s) => (
-            <div key={s.label}>
-              <p className="text-3xl font-display font-bold text-primary">{s.val}</p>
-              <p className="text-sm text-muted-foreground mt-1">{s.label}</p>
-            </div>
-          ))}
+        <div className="max-w-4xl mx-auto grid grid-cols-2 gap-6 text-center">
+          <div>
+            <p className="text-3xl font-display font-bold text-primary">{stats.bins}</p>
+            <p className="text-sm text-muted-foreground mt-1">Smart Bins Active</p>
+          </div>
+          <div>
+            <p className="text-3xl font-display font-bold text-primary">{stats.detections}</p>
+            <p className="text-sm text-muted-foreground mt-1">AI Detections Made</p>
+          </div>
         </div>
       </section>
     </div>

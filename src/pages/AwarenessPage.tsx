@@ -1,4 +1,3 @@
-import { recyclingTips } from "@/lib/mockData";
 import { Leaf, BookOpen, Recycle, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -9,6 +8,15 @@ const guides = [
   { icon: "🟡", title: "Hazardous", items: ["Batteries", "Paint", "Electronics", "Light bulbs"], color: "bg-warning/10 border-warning/20" },
 ];
 
+const recyclingTips = [
+  { title: "Rinse Before Recycling", description: "Clean containers to prevent contamination of recyclable materials.", icon: "💧" },
+  { title: "Flatten Cardboard", description: "Break down boxes to save space and improve recycling efficiency.", icon: "📦" },
+  { title: "Separate Materials", description: "Keep plastic, paper, metal, and organic waste in different bins.", icon: "♻️" },
+  { title: "Avoid Plastic Bags", description: "Use reusable bags. Plastic bags jam recycling machinery.", icon: "🛍️" },
+  { title: "Compost Organic Waste", description: "Turn food scraps into nutrient-rich soil for gardens.", icon: "🌱" },
+  { title: "E-Waste Disposal", description: "Take electronics to certified e-waste collection points.", icon: "🔌" },
+];
+
 export default function AwarenessPage() {
   return (
     <div className="p-6 space-y-8">
@@ -17,7 +25,6 @@ export default function AwarenessPage() {
         <p className="text-sm text-muted-foreground">Learn about proper waste segregation and recycling</p>
       </div>
 
-      {/* Segregation Guide */}
       <section>
         <h2 className="text-lg font-display font-semibold mb-4 flex items-center gap-2">
           <BookOpen className="h-5 w-5 text-primary" /> Waste Segregation Guide
@@ -46,7 +53,6 @@ export default function AwarenessPage() {
         </div>
       </section>
 
-      {/* Tips */}
       <section>
         <h2 className="text-lg font-display font-semibold mb-4 flex items-center gap-2">
           <Recycle className="h-5 w-5 text-primary" /> Recycling Tips
@@ -62,7 +68,6 @@ export default function AwarenessPage() {
         </div>
       </section>
 
-      {/* Impact */}
       <section className="gradient-hero rounded-xl p-6">
         <h2 className="text-lg font-display font-semibold flex items-center gap-2">
           <Globe className="h-5 w-5 text-primary" /> Environmental Impact
