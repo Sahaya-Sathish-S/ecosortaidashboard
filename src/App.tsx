@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
+import AdminLoginPage from "@/pages/AdminLoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import MonitoringPage from "@/pages/MonitoringPage";
 import DetectionPage from "@/pages/DetectionPage";
@@ -15,6 +16,7 @@ import AnalyticsPage from "@/pages/AnalyticsPage";
 import MapPage from "@/pages/MapPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import AwarenessPage from "@/pages/AwarenessPage";
+import LeaderboardPage from "@/pages/LeaderboardPage";
 import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
 
@@ -29,6 +31,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin-login" element={<AdminLoginPage />} />
             <Route path="/*" element={
               <ProtectedRoute>
                 <AppLayout>
@@ -41,6 +44,7 @@ const App = () => (
                     <Route path="/map" element={<MapPage />} />
                     <Route path="/notifications" element={<NotificationsPage />} />
                     <Route path="/awareness" element={<AwarenessPage />} />
+                    <Route path="/leaderboard" element={<LeaderboardPage />} />
                     <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPage /></ProtectedRoute>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
