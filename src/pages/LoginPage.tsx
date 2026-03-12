@@ -4,11 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Leaf, LogIn, UserPlus, Shield } from "lucide-react";
+import { Leaf, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<"login" | "signup" | "admin">("login");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -25,8 +25,7 @@ export default function LoginPage() {
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success("Account created! Welcome to EcoSort AI.");
-        navigate("/dashboard");
+        toast.success("Account created! Please check your email to verify, then sign in.");
       }
     } else {
       const { error } = await signIn(email, password);
@@ -52,25 +51,18 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-card rounded-2xl shadow-elevated border p-8">
-          {/* Mode Tabs */}
           <div className="flex gap-1 bg-muted rounded-xl p-1 mb-6">
             <button
               onClick={() => setMode("login")}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${mode === "login" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
+              className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${mode === "login" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
             >
-              <LogIn className="h-3.5 w-3.5 inline mr-1.5" />Login
+              <LogIn className="h-3.5 w-3.5 inline mr-1.5" />Sign In
             </button>
             <button
               onClick={() => setMode("signup")}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${mode === "signup" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
+              className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${mode === "signup" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
             >
               <UserPlus className="h-3.5 w-3.5 inline mr-1.5" />Sign Up
-            </button>
-            <button
-              onClick={() => setMode("admin")}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${mode === "admin" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
-            >
-              <Shield className="h-3.5 w-3.5 inline mr-1.5" />Admin
             </button>
           </div>
 
@@ -91,16 +83,13 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" disabled={loading} className="w-full btn-glow gradient-eco border-0 text-primary-foreground h-11">
-              {loading ? "Please wait..." : mode === "signup" ? "Create Account" : mode === "admin" ? "Admin Login" : "Sign In"}
+              {loading ? "Please wait..." : mode === "signup" ? "Create Account" : "Sign In"}
             </Button>
           </form>
 
-          {mode === "admin" && (
-            <p className="text-xs text-muted-foreground text-center mt-4">
-              <Shield className="h-3 w-3 inline mr-1" />
-              Admin access is restricted to authorized personnel only.
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            {mode === "login" ? "Admin users sign in with their admin credentials here." : "After signup, verify your email before signing in."}
+          </p>
         </div>
       </div>
     </div>

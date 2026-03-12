@@ -107,4 +107,20 @@
     box-shadow: 0 0 18px hsl(152 60% 36% / 0.5), 0 0 36px hsl(152 60% 36% / 0.25);
     transform: translateY(-1px);
   }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px hsl(152 60% 50% / 0.6); }
+    50% { opacity: 0.7; box-shadow: 0 0 8px hsl(152 60% 50% / 0.9); }
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
 }

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Camera, X, Loader2, Scan } from "lucide-react";
+import { Camera, X, Loader2, Scan, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,12 +11,35 @@ interface DetectionResult {
   description: string;
 }
 
+function speakResult(result: DetectionResult) {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+
+  const text =
+    result.wasteType === "No Waste"
+      ? "No waste was detected in the image. Please try scanning again with a waste item visible."
+      : `Detected ${result.wasteType} waste with ${result.confidence}% confidence. ${result.description}`;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.95;
+  utterance.pitch = 1.05;
+  utterance.volume = 1;
+  // Prefer a good English voice
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(
+    (v) => v.lang.startsWith("en") && v.name.includes("Google")
+  ) || voices.find((v) => v.lang.startsWith("en"));
+  if (preferred) utterance.voice = preferred;
+  window.speechSynthesis.speak(utterance);
+}
+
 export function CameraDetection() {
   const [isOpen, setIsOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<DetectionResult | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { user } = useAuth();
@@ -42,6 +65,7 @@ export function CameraDetection() {
 
   const stopCamera = useCallback(() => {
     stream?.getTracks().forEach((t) => t.stop());
+    window.speechSynthesis?.cancel();
     setStream(null);
     setCapturing(false);
     setIsOpen(false);
@@ -73,6 +97,11 @@ export function CameraDetection() {
       const detection: DetectionResult = data;
       setResult(detection);
 
+      // Voice output
+      if (voiceEnabled) {
+        speakResult(detection);
+      }
+
       // Save to detection history
       if (user) {
         await supabase.from("detection_history").insert({
@@ -86,7 +115,7 @@ export function CameraDetection() {
     } finally {
       setAnalyzing(false);
     }
-  }, [user]);
+  }, [user, voiceEnabled]);
 
   if (!isOpen) {
     return (
@@ -98,16 +127,29 @@ export function CameraDetection() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-card rounded-2xl shadow-elevated border max-w-lg w-full overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-display font-semibold flex items-center gap-2">
             <Scan className="h-4 w-4 text-primary" />
             AI Waste Scanner
           </h3>
-          <Button variant="ghost" size="icon" onClick={stopCamera}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setVoiceEnabled(!voiceEnabled);
+                if (voiceEnabled) window.speechSynthesis?.cancel();
+              }}
+              title={voiceEnabled ? "Mute voice" : "Enable voice"}
+            >
+              {voiceEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={stopCamera}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="relative">
@@ -140,6 +182,11 @@ export function CameraDetection() {
               </div>
             </div>
             <p className="text-sm text-muted-foreground">{result.description}</p>
+            {voiceEnabled && (
+              <p className="text-xs text-primary flex items-center gap-1">
+                <Volume2 className="h-3 w-3" /> Voice reading enabled
+              </p>
+            )}
           </div>
         )}
 
