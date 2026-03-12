@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Camera, X, Loader2, Scan, Volume2, VolumeX } from "lucide-react";
+import { Camera, X, Loader2, Scan, Volume2, VolumeX, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,24 +11,32 @@ interface DetectionResult {
   description: string;
 }
 
-function speakResult(result: DetectionResult) {
+const CREDIT_MAP: Record<string, number> = {
+  Plastic: 10,
+  Paper: 8,
+  Metal: 15,
+  Organic: 5,
+  Glass: 12,
+  "E-Waste": 20,
+};
+
+function speakResult(result: DetectionResult, credits: number) {
   if (!("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
 
-  const text =
-    result.wasteType === "No Waste"
-      ? "No waste was detected in the image. Please try scanning again with a waste item visible."
-      : `Detected ${result.wasteType} waste with ${result.confidence}% confidence. ${result.description}`;
+  let text: string;
+  if (result.wasteType === "No Waste") {
+    text = "No waste was detected in the image. Please try scanning again with a waste item visible.";
+  } else {
+    text = `Detected ${result.wasteType} waste with ${result.confidence}% confidence. ${result.description}. You earned ${credits} green credits for this disposal!`;
+  }
 
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = 0.95;
   utterance.pitch = 1.05;
   utterance.volume = 1;
-  // Prefer a good English voice
   const voices = window.speechSynthesis.getVoices();
-  const preferred = voices.find(
-    (v) => v.lang.startsWith("en") && v.name.includes("Google")
-  ) || voices.find((v) => v.lang.startsWith("en"));
+  const preferred = voices.find((v) => v.lang.startsWith("en") && v.name.includes("Google")) || voices.find((v) => v.lang.startsWith("en"));
   if (preferred) utterance.voice = preferred;
   window.speechSynthesis.speak(utterance);
 }
@@ -38,6 +46,7 @@ export function CameraDetection() {
   const [capturing, setCapturing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<DetectionResult | null>(null);
+  const [earnedCredits, setEarnedCredits] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -52,11 +61,10 @@ export function CameraDetection() {
       setStream(mediaStream);
       setCapturing(true);
       setResult(null);
+      setEarnedCredits(0);
       setIsOpen(true);
       setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = mediaStream;
       }, 100);
     } catch {
       toast.error("Camera access denied. Please allow camera permissions.");
@@ -70,6 +78,7 @@ export function CameraDetection() {
     setCapturing(false);
     setIsOpen(false);
     setResult(null);
+    setEarnedCredits(0);
   }, [stream]);
 
   const captureAndAnalyze = useCallback(async () => {
@@ -84,31 +93,40 @@ export function CameraDetection() {
     ctx.drawImage(video, 0, 0);
 
     const imageDataUrl = canvas.toDataURL("image/jpeg", 0.8);
-
     setAnalyzing(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("analyze-waste", {
         body: { image: imageDataUrl },
       });
-
       if (error) throw error;
 
       const detection: DetectionResult = data;
       setResult(detection);
 
-      // Voice output
-      if (voiceEnabled) {
-        speakResult(detection);
-      }
+      const credits = detection.wasteType !== "No Waste" ? (CREDIT_MAP[detection.wasteType] || 7) : 0;
+      setEarnedCredits(credits);
 
-      // Save to detection history
+      if (voiceEnabled) speakResult(detection, credits);
+
       if (user) {
-        await supabase.from("detection_history").insert({
+        // Save detection
+        const { data: detectionRow } = await supabase.from("detection_history").insert({
           user_id: user.id,
           waste_type: detection.wasteType,
           confidence: detection.confidence,
-        });
+        }).select("id").single();
+
+        // Award green credits
+        if (credits > 0) {
+          await supabase.from("green_credits").insert({
+            user_id: user.id,
+            credits,
+            waste_type: detection.wasteType,
+            detection_id: detectionRow?.id || null,
+          });
+          toast.success(`+${credits} Green Credits earned! 🌱`);
+        }
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to analyze waste");
@@ -135,29 +153,16 @@ export function CameraDetection() {
             AI Waste Scanner
           </h3>
           <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setVoiceEnabled(!voiceEnabled);
-                if (voiceEnabled) window.speechSynthesis?.cancel();
-              }}
-              title={voiceEnabled ? "Mute voice" : "Enable voice"}
-            >
+            <Button variant="ghost" size="icon" onClick={() => { setVoiceEnabled(!voiceEnabled); if (voiceEnabled) window.speechSynthesis?.cancel(); }} title={voiceEnabled ? "Mute voice" : "Enable voice"}>
               {voiceEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
             </Button>
-            <Button variant="ghost" size="icon" onClick={stopCamera}>
-              <X className="h-4 w-4" />
-            </Button>
+            <Button variant="ghost" size="icon" onClick={stopCamera}><X className="h-4 w-4" /></Button>
           </div>
         </div>
 
         <div className="relative">
-          {capturing && (
-            <video ref={videoRef} autoPlay playsInline muted className="w-full aspect-[4/3] object-cover" />
-          )}
+          {capturing && <video ref={videoRef} autoPlay playsInline muted className="w-full aspect-[4/3] object-cover" />}
           <canvas ref={canvasRef} className="hidden" />
-
           {analyzing && (
             <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -170,9 +175,7 @@ export function CameraDetection() {
           <div className="p-5 space-y-3 border-t">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <span className="text-2xl">
-                  {result.wasteType === "No Waste" ? "❌" : "♻️"}
-                </span>
+                <span className="text-2xl">{result.wasteType === "No Waste" ? "❌" : "♻️"}</span>
               </div>
               <div>
                 <p className="font-display font-bold text-lg">{result.wasteType}</p>
@@ -182,6 +185,14 @@ export function CameraDetection() {
               </div>
             </div>
             <p className="text-sm text-muted-foreground">{result.description}</p>
+
+            {earnedCredits > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/20">
+                <Coins className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm font-semibold text-yellow-700">+{earnedCredits} Green Credits Earned!</span>
+              </div>
+            )}
+
             {voiceEnabled && (
               <p className="text-xs text-primary flex items-center gap-1">
                 <Volume2 className="h-3 w-3" /> Voice reading enabled

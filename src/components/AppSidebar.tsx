@@ -1,6 +1,6 @@
 import {
   Home, LayoutDashboard, Trash2, Brain, BarChart3,
-  Map, Bell, Leaf, Settings,
+  Map, Bell, Leaf, Settings, Trophy,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -18,6 +18,7 @@ const mainItems = [
   { title: "AI Detection", url: "/detection", icon: Brain },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Smart Map", url: "/map", icon: Map },
+  { title: "Leaderboard", url: "/leaderboard", icon: Trophy },
 ];
 
 const systemItems = [
