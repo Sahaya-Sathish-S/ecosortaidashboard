@@ -78,24 +78,36 @@ export type Database = {
       }
       notifications: {
         Row: {
+          audience_role: Database["public"]["Enums"]["app_role"] | null
           created_at: string
           id: string
+          image_url: string | null
           message: string
           read: boolean
+          related_bin_id: string | null
+          target_user_id: string | null
           type: string
         }
         Insert: {
+          audience_role?: Database["public"]["Enums"]["app_role"] | null
           created_at?: string
           id?: string
+          image_url?: string | null
           message: string
           read?: boolean
+          related_bin_id?: string | null
+          target_user_id?: string | null
           type: string
         }
         Update: {
+          audience_role?: Database["public"]["Enums"]["app_role"] | null
           created_at?: string
           id?: string
+          image_url?: string | null
           message?: string
           read?: boolean
+          related_bin_id?: string | null
+          target_user_id?: string | null
           type?: string
         }
         Relationships: []
@@ -204,6 +216,14 @@ export type Database = {
       }
     }
     Functions: {
+      complete_account_setup: {
+        Args: {
+          _full_name?: string
+          _phone?: string
+          _requested_role?: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -213,7 +233,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "collector"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -341,7 +361,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "collector"],
     },
   },
 } as const
