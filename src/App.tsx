@@ -10,6 +10,7 @@ import AppLayout from "@/components/AppLayout";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
+import CollectorLoginPage from "@/pages/CollectorLoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import MonitoringPage from "@/pages/MonitoringPage";
 import DetectionPage from "@/pages/DetectionPage";
@@ -20,6 +21,7 @@ import AwarenessPage from "@/pages/AwarenessPage";
 import LeaderboardPage from "@/pages/LeaderboardPage";
 import AdminPage from "@/pages/AdminPage";
 import ProfilePage from "@/pages/ProfilePage";
+import CollectorPage from "@/pages/CollectorPage";
 import { ChatPage } from "@/components/ChatBot";
 import NotFound from "@/pages/NotFound";
 
@@ -35,6 +37,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/admin-login" element={<AdminLoginPage />} />
+            <Route path="/collector-login" element={<CollectorLoginPage />} />
             <Route path="/*" element={
               <ProtectedRoute>
                 <AppLayout>
@@ -50,6 +53,7 @@ const App = () => (
                     <Route path="/leaderboard" element={<LeaderboardPage />} />
                     <Route path="/chat" element={<ChatPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/collector" element={<ProtectedRoute collectorOnly><CollectorPage /></ProtectedRoute>} />
                     <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPage /></ProtectedRoute>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>

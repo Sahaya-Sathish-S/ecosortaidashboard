@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Leaf, LogIn, UserPlus, Shield } from "lucide-react";
+import { LogIn, UserPlus, Shield, Truck } from "lucide-react";
 import { toast } from "sonner";
 import ecosortLogo from "@/assets/ecosort-logo.png";
 
@@ -95,9 +95,14 @@ export default function LoginPage() {
             <p className="text-xs text-white/30">
               {mode === "login" ? "Don't have an account? Sign up above." : "Already have an account? Sign in above."}
             </p>
-            <Link to="/admin-login" className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1 transition-colors">
-              <Shield className="h-3 w-3" /> Admin
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link to="/collector-login" className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1 transition-colors">
+                <Truck className="h-3 w-3" /> Collector
+              </Link>
+              <Link to="/admin-login" className="text-xs text-white/30 hover:text-white/50 flex items-center gap-1 transition-colors">
+                <Shield className="h-3 w-3" /> Admin
+              </Link>
+            </div>
           </div>
         </div>
       </div>

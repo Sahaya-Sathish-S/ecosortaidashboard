@@ -1,6 +1,6 @@
 import {
   Home, LayoutDashboard, Trash2, Brain, BarChart3,
-  Map, Bell, Leaf, Settings, Trophy, MessageCircle, User,
+  Map, Bell, Leaf, Settings, Trophy, MessageCircle, User, Truck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -33,10 +33,11 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isCollector } = useAuth();
   const isActive = (path: string) => location.pathname === path;
 
   const adminItems = isAdmin ? [{ title: "Admin Panel", url: "/admin", icon: Settings }] : [];
+  const collectorItems = isCollector ? [{ title: "Collector Center", url: "/collector", icon: Truck }] : [];
 
   return (
     <Sidebar collapsible="icon">
@@ -75,7 +76,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>System</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {[...systemItems, ...adminItems].map((item) => (
+              {[...systemItems, ...collectorItems, ...adminItems].map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink to={item.url} activeClassName="bg-sidebar-accent text-sidebar-primary">
