@@ -59,7 +59,7 @@ export default function LeaderboardPage() {
   }, [user]);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 app-page-bg min-h-full">
       <div>
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <Trophy className="h-6 w-6 text-yellow-500" /> Green Credits Leaderboard
