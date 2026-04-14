@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Mic, MicOff, Volume2, VolumeX, Sparkles } from "lucide-react";
+import { MessageCircle, X, Send, Mic, Square, Volume2, VolumeX, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -18,18 +18,12 @@ function speakText(text: string, lang: Lang) {
   utterance.volume = 1;
   const langCode = lang === "hi" ? "hi-IN" : lang === "ta" ? "ta-IN" : "en-US";
   utterance.lang = langCode;
-  
-  // Try to find matching voice
   const voices = window.speechSynthesis.getVoices();
-  const exactMatch = voices.find((v) => v.lang === langCode);
-  const partialMatch = voices.find((v) => v.lang.startsWith(langCode.split("-")[0]));
-  if (exactMatch) utterance.voice = exactMatch;
-  else if (partialMatch) utterance.voice = partialMatch;
-  
+  const match = voices.find((v) => v.lang === langCode) || voices.find((v) => v.lang.startsWith(langCode.split("-")[0]));
+  if (match) utterance.voice = match;
   window.speechSynthesis.speak(utterance);
 }
 
-// Preload voices
 if ("speechSynthesis" in window) {
   window.speechSynthesis.getVoices();
   window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
@@ -37,7 +31,6 @@ if ("speechSynthesis" in window) {
 
 export function ChatBotWidget() {
   const [open, setOpen] = useState(false);
-
   return (
     <>
       {open && <ChatPanel onClose={() => setOpen(false)} floating />}
@@ -70,6 +63,7 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
   const [recording, setRecording] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [transcript, setTranscript] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const timerRef = useRef<any>(null);
@@ -78,7 +72,6 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  // Recording timer
   useEffect(() => {
     if (recording) {
       setRecordingTime(0);
@@ -96,6 +89,7 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
     const allMessages = [...messages, userMsg];
     setMessages(allMessages);
     setInput("");
+    setTranscript("");
     setLoading(true);
 
     let assistantSoFar = "";
@@ -116,8 +110,7 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
       }
 
       const contentType = resp.headers.get("content-type") || "";
-      
-      // Handle non-streaming fallback response
+
       if (contentType.includes("application/json")) {
         const data = await resp.json();
         const content = data.content || data.fallback || "Sorry, I couldn't process that. Please try again.";
@@ -126,7 +119,6 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
         return;
       }
 
-      // Handle streaming response
       if (!resp.body) throw new Error("No response body");
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -162,61 +154,75 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
         }
       }
 
-      if (voiceEnabled && assistantSoFar) {
-        speakText(assistantSoFar, lang);
-      }
-    } catch (e: any) {
-      setMessages((prev) => [...prev, { role: "assistant", content: `Sorry, something went wrong. Please try again! 🌱` }]);
+      if (voiceEnabled && assistantSoFar) speakText(assistantSoFar, lang);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again! 🌱" }]);
     } finally {
       setLoading(false);
     }
   }, [messages, lang, voiceEnabled]);
 
-  const toggleRecording = () => {
-    if (recording) {
-      recognitionRef.current?.stop();
-      setRecording(false);
-      return;
-    }
-
+  const startRecording = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
-      alert("Speech recognition not supported in this browser. Please use Chrome.");
+      alert("Speech recognition not supported. Please use Chrome.");
       return;
     }
 
     const recognition = new SR();
     recognition.lang = lang === "hi" ? "hi-IN" : lang === "ta" ? "ta-IN" : "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 3;
-    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognition.maxAlternatives = 1;
+
+    let finalTranscript = "";
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setRecording(false);
-      if (transcript.trim()) send(transcript);
-    };
-    recognition.onerror = (e: any) => {
-      console.error("Speech recognition error:", e.error);
-      setRecording(false);
-      if (e.error === "not-allowed") {
-        alert("Microphone access denied. Please allow microphone permissions.");
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += t + " ";
+        } else {
+          interim = t;
+        }
       }
+      setTranscript((finalTranscript + interim).trim());
     };
-    recognition.onend = () => setRecording(false);
+
+    recognition.onerror = (e: any) => {
+      console.error("Speech error:", e.error);
+      setRecording(false);
+      if (e.error === "not-allowed") alert("Microphone access denied.");
+    };
+
+    recognition.onend = () => {
+      // Don't auto-restart — user will press stop
+    };
 
     recognitionRef.current = recognition;
     recognition.start();
     setRecording(true);
+    setTranscript("");
+  };
+
+  const stopRecording = () => {
+    recognitionRef.current?.stop();
+    setRecording(false);
+    // Send the transcript
+    setTimeout(() => {
+      const text = transcript.trim();
+      if (text) send(text);
+      setTranscript("");
+    }, 300);
   };
 
   const containerClass = floating
-    ? "fixed bottom-6 right-6 z-50 w-[400px] h-[580px] rounded-2xl shadow-elevated border bg-card flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300"
+    ? "fixed bottom-6 right-6 z-50 w-[400px] max-w-[calc(100vw-3rem)] h-[580px] rounded-2xl shadow-elevated border bg-card flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300"
     : "w-full h-full rounded-2xl shadow-elevated border bg-card flex flex-col overflow-hidden";
 
   return (
     <div className={containerClass}>
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b gradient-eco">
         <div className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-xl bg-primary-foreground/20 backdrop-blur flex items-center justify-center">
@@ -224,7 +230,7 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
           </div>
           <div>
             <p className="text-sm font-display font-bold text-primary-foreground">EcoSort Assistant</p>
-            <p className="text-[10px] text-primary-foreground/70">AI-powered • Always ready to help</p>
+            <p className="text-[10px] text-primary-foreground/70">AI-powered • {LANG_LABELS[lang]}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -248,7 +254,6 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
         </div>
       </div>
 
-      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
           <div className="text-center py-8">
@@ -296,25 +301,53 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
         )}
       </div>
 
-      {/* Input */}
       <div className="border-t p-3">
         {recording && (
-          <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-xl bg-destructive/10 border border-destructive/20 animate-pulse">
+          <div className="flex items-center gap-3 mb-2 px-3 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20">
             <div className="h-3 w-3 rounded-full bg-destructive animate-pulse" />
-            <span className="text-xs font-medium text-destructive">Recording... {recordingTime}s</span>
-            <span className="text-[10px] text-muted-foreground ml-auto">{LANG_LABELS[lang]}</span>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-destructive">Recording • {recordingTime}s</span>
+                <span className="text-[10px] text-muted-foreground">{LANG_LABELS[lang]}</span>
+              </div>
+              {transcript && (
+                <p className="text-xs text-foreground mt-1 italic truncate">"{transcript}"</p>
+              )}
+            </div>
+            {/* Audio wave animation */}
+            <div className="flex items-center gap-[2px] h-5">
+              {[1,2,3,4,5].map((i) => (
+                <div key={i} className="w-[3px] bg-destructive rounded-full animate-pulse" style={{
+                  height: `${8 + Math.random() * 12}px`,
+                  animationDelay: `${i * 100}ms`,
+                  animationDuration: "0.6s",
+                }} />
+              ))}
+            </div>
           </div>
         )}
         <div className="flex items-center gap-2">
-          <Button
-            variant={recording ? "destructive" : "outline"}
-            size="icon"
-            className={`h-10 w-10 flex-shrink-0 rounded-xl transition-all ${recording ? "animate-pulse shadow-lg shadow-destructive/30" : "hover:bg-primary/10 hover:text-primary hover:border-primary/30"}`}
-            onClick={toggleRecording}
-            title={recording ? "Stop recording" : "Voice input"}
-          >
-            {recording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </Button>
+          {recording ? (
+            <Button
+              variant="destructive"
+              size="icon"
+              className="h-10 w-10 flex-shrink-0 rounded-xl shadow-lg shadow-destructive/30 animate-pulse"
+              onClick={stopRecording}
+              title="Stop & Send"
+            >
+              <Square className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 flex-shrink-0 rounded-xl hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
+              onClick={startRecording}
+              title="Hold to record voice"
+            >
+              <Mic className="h-4 w-4" />
+            </Button>
+          )}
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}

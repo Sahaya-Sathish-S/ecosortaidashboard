@@ -50,7 +50,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl mx-auto">
+    <div className="p-6 space-y-6 max-w-3xl mx-auto app-page-bg min-h-full">
       <div>
         <h1 className="text-2xl font-display font-bold">My Profile</h1>
         <p className="text-sm text-muted-foreground">Manage your account and view your impact</p>

@@ -9,9 +9,15 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { image } = await req.json();
+    const { image, language } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const langInstruction = language === "hi"
+      ? "IMPORTANT: Write the description field ENTIRELY in Hindi (Devanagari script). Example: 'यह एक प्लास्टिक की बोतल है। इसे रीसाइकल बिन में डालें।'"
+      : language === "ta"
+      ? "IMPORTANT: Write the description field ENTIRELY in Tamil (Tamil script). Example: 'இது ஒரு பிளாஸ்டிக் பாட்டில். இதை மறுசுழற்சி தொட்டியில் போடவும்.'"
+      : "Write the description in English.";
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -24,38 +30,27 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert waste classification AI with extensive training data. Analyze the image carefully and classify the PRIMARY waste type visible.
+            content: `You are an expert waste classification AI. Analyze the image and classify the PRIMARY waste type visible.
 
 CLASSIFICATION RULES:
 1. Focus on the MAIN waste item, not background objects
-2. If multiple waste items are visible, classify the most prominent one
-3. Common items and their categories:
-   - PLASTIC: bottles, bags, containers, packaging, straws, cups, wrappers, food containers, PET bottles, HDPE containers, polystyrene, bubble wrap
-   - PAPER: newspapers, cardboard, books, envelopes, paper bags, tissues, paper plates, magazines, office paper, paper towels
-   - METAL: cans, foil, wires, nails, screws, metal lids, aluminum cans, tin cans, steel containers, copper wire
-   - ORGANIC: food scraps, fruit peels, vegetable waste, leaves, garden waste, coffee grounds, eggshells, tea bags, flowers, wood chips
-   - GLASS: bottles, jars, mirrors, window glass, drinking glasses, glass containers, broken glass
-   - E-WASTE: phones, chargers, cables, batteries, circuit boards, keyboards, mice, headphones, old computers, tablets, TVs, monitors, printers, USB drives
-   - HAZARDOUS: chemicals, paint, medical waste, syringes, pesticides, cleaning products, motor oil, light bulbs (CFL/fluorescent), aerosol cans
-   - MIXED: when multiple distinct waste types are equally visible and cannot be separated
+2. Categories: PLASTIC, PAPER, METAL, ORGANIC, GLASS, E-WASTE, HAZARDOUS, MIXED
+3. Key distinctions:
+   - Phone/tablet/laptop → E-WASTE
+   - Cardboard → Paper
+   - Aluminum cans → Metal
+   - Batteries → Hazardous
+   - Clothes/textiles → Mixed
+4. If NO waste item is visible, return "No Waste"
 
-4. IMPORTANT DISTINCTIONS:
-   - A phone/tablet/laptop is E-WASTE, not Metal or Plastic
-   - A plastic bottle with liquid inside is still Plastic
-   - Food in a container: if mostly food → Organic, if mostly container → Plastic/Paper
-   - Cardboard boxes are Paper, not Mixed
-   - Aluminum cans are Metal, not Plastic
-   - Clothes/textiles should be classified as Mixed
-   - Batteries are ALWAYS Hazardous, even small ones
-
-5. If NO waste item is visible (e.g., just a person, furniture, landscape), return "No Waste"
+${langInstruction}
 
 Respond ONLY by calling the classify_waste function.`,
           },
           {
             role: "user",
             content: [
-              { type: "text", text: "Analyze this image and classify the waste type. Focus on the primary waste item visible. If you see a phone, laptop, or electronic device, classify it as E-Waste. If you see no waste, say 'No Waste'." },
+              { type: "text", text: "Classify the waste in this image. Focus on the primary waste item." },
               { type: "image_url", image_url: { url: image } },
             ],
           },
@@ -65,23 +60,16 @@ Respond ONLY by calling the classify_waste function.`,
             type: "function",
             function: {
               name: "classify_waste",
-              description: "Classify waste from image with detailed analysis",
+              description: "Classify waste from image",
               parameters: {
                 type: "object",
                 properties: {
                   wasteType: {
                     type: "string",
                     enum: ["Plastic", "Paper", "Metal", "Organic", "Glass", "E-Waste", "Hazardous", "Mixed", "No Waste"],
-                    description: "The type of waste detected",
                   },
-                  confidence: {
-                    type: "number",
-                    description: "Confidence percentage from 0 to 100",
-                  },
-                  description: {
-                    type: "string",
-                    description: "Brief description: what specific item was detected, why it's classified this way, and recycling advice (1-2 sentences)",
-                  },
+                  confidence: { type: "number", description: "0-100" },
+                  description: { type: "string", description: "1-2 sentence description with recycling advice in the specified language" },
                 },
                 required: ["wasteType", "confidence", "description"],
                 additionalProperties: false,
@@ -97,11 +85,6 @@ Respond ONLY by calling the classify_waste function.`,
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
@@ -120,7 +103,6 @@ Respond ONLY by calling the classify_waste function.`,
     }
 
     const result = JSON.parse(toolCall.function.arguments);
-
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

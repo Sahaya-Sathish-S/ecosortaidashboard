@@ -19,25 +19,33 @@ const CREDIT_MAP: Record<string, number> = {
   Plastic: 10, Paper: 8, Metal: 15, Organic: 5, Glass: 12, "E-Waste": 20, Hazardous: 25,
 };
 
-// Preload voices
-if ("speechSynthesis" in window) {
-  window.speechSynthesis.getVoices();
-  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-}
+const WASTE_TYPE_LABELS: Record<Lang, Record<string, string>> = {
+  en: {},
+  hi: {
+    Plastic: "प्लास्टिक", Paper: "कागज़", Metal: "धातु", Organic: "जैविक",
+    Glass: "काँच", "E-Waste": "ई-कचरा", Hazardous: "खतरनाक", Mixed: "मिश्रित", "No Waste": "कोई कचरा नहीं",
+  },
+  ta: {
+    Plastic: "பிளாஸ்டிக்", Paper: "காகிதம்", Metal: "உலோகம்", Organic: "இயற்கை",
+    Glass: "கண்ணாடி", "E-Waste": "மின்-கழிவு", Hazardous: "ஆபத்தான", Mixed: "கலப்பு", "No Waste": "கழிவு இல்லை",
+  },
+};
 
 function speakResult(result: DetectionResult, credits: number, lang: Lang) {
   if (!("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
 
+  const wasteLabel = (lang !== "en" && WASTE_TYPE_LABELS[lang][result.wasteType]) || result.wasteType;
+
   let text: string;
   if (lang === "hi") {
     text = result.wasteType === "No Waste"
       ? "छवि में कोई कचरा नहीं मिला। कृपया कचरे की वस्तु के साथ पुनः स्कैन करें।"
-      : `${result.wasteType} कचरा पाया गया, ${result.confidence} प्रतिशत विश्वसनीयता। ${result.description}। आपने ${credits} ग्रीन क्रेडिट अर्जित किए!`;
+      : `${wasteLabel} कचरा पाया गया, ${result.confidence} प्रतिशत विश्वसनीयता। ${result.description}। आपने ${credits} ग्रीन क्रेडिट अर्जित किए!`;
   } else if (lang === "ta") {
     text = result.wasteType === "No Waste"
       ? "படத்தில் கழிவுகள் கண்டறியப்படவில்லை. கழிவுப் பொருளுடன் மீண்டும் ஸ்கேன் செய்யவும்."
-      : `${result.wasteType} கழிவு கண்டறியப்பட்டது, ${result.confidence} சதவீத நம்பகத்தன்மை. ${result.description}. நீங்கள் ${credits} பசுமை கிரெடிட்களை பெற்றீர்கள்!`;
+      : `${wasteLabel} கழிவு கண்டறியப்பட்டது, ${result.confidence} சதவீத நம்பகத்தன்மை. ${result.description}. நீங்கள் ${credits} பசுமை கிரெடிட்களை பெற்றீர்கள்!`;
   } else {
     text = result.wasteType === "No Waste"
       ? "No waste was detected. Please try scanning again with a waste item visible."
@@ -50,15 +58,18 @@ function speakResult(result: DetectionResult, credits: number, lang: Lang) {
   utterance.pitch = 1;
   const langCode = lang === "hi" ? "hi-IN" : lang === "ta" ? "ta-IN" : "en-US";
   utterance.lang = langCode;
-  
-  // Wait briefly for voices to load, then find match
+
   const voices = window.speechSynthesis.getVoices();
-  const exactMatch = voices.find((v) => v.lang === langCode);
-  const partialMatch = voices.find((v) => v.lang.startsWith(langCode.split("-")[0]));
-  if (exactMatch) utterance.voice = exactMatch;
-  else if (partialMatch) utterance.voice = partialMatch;
-  
+  const match = voices.find((v) => v.lang === langCode) || voices.find((v) => v.lang.startsWith(langCode.split("-")[0]));
+  if (match) utterance.voice = match;
+
   window.speechSynthesis.speak(utterance);
+}
+
+// Preload voices
+if ("speechSynthesis" in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 }
 
 export function CameraDetection() {
@@ -121,7 +132,7 @@ export function CameraDetection() {
 
     try {
       const { data, error } = await supabase.functions.invoke("analyze-waste", {
-        body: { image: imageDataUrl },
+        body: { image: imageDataUrl, language: lang },
       });
       if (error) throw error;
 
@@ -150,16 +161,12 @@ export function CameraDetection() {
           toast.success(`+${credits} Green Credits earned! 🌱`);
 
           const qrPayload = JSON.stringify({
-            userId: user.id,
-            credits,
-            wasteType: detection.wasteType,
-            detectionId: detectionRow?.id,
-            timestamp: Date.now(),
+            userId: user.id, credits, wasteType: detection.wasteType,
+            detectionId: detectionRow?.id, timestamp: Date.now(),
           });
           setQrData(btoa(qrPayload));
         }
 
-        // Create notification for the detection
         await supabase.from("notifications").insert({
           type: "detection",
           message: `AI detected ${detection.wasteType} waste (${detection.confidence}% confidence). +${credits} green credits earned!`,
