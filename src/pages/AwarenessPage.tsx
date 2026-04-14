@@ -19,7 +19,7 @@ const recyclingTips = [
 
 export default function AwarenessPage() {
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-8 app-page-bg min-h-full">
       <div>
         <h1 className="text-2xl font-display font-bold">Eco Awareness</h1>
         <p className="text-sm text-muted-foreground">Learn about proper waste segregation and recycling</p>
@@ -33,7 +33,7 @@ export default function AwarenessPage() {
           {guides.map((g, i) => (
             <motion.div
               key={g.title}
-              className={`rounded-xl p-5 border ${g.color}`}
+              className={`rounded-xl p-5 border ${g.color} hover:shadow-elevated hover:scale-[1.03] transition-all cursor-default backdrop-blur`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
@@ -58,17 +58,23 @@ export default function AwarenessPage() {
           <Recycle className="h-5 w-5 text-primary" /> Recycling Tips
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {recyclingTips.map((tip) => (
-            <div key={tip.title} className="bg-card rounded-xl p-5 shadow-card border">
+          {recyclingTips.map((tip, i) => (
+            <motion.div
+              key={tip.title}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="bg-card/80 backdrop-blur rounded-xl p-5 shadow-card border hover:shadow-elevated hover:border-primary/20 hover:scale-[1.02] transition-all"
+            >
               <span className="text-3xl">{tip.icon}</span>
               <h3 className="font-display font-semibold mt-2">{tip.title}</h3>
               <p className="text-sm text-muted-foreground mt-1">{tip.description}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
 
-      <section className="gradient-hero rounded-xl p-6">
+      <section className="rounded-2xl p-6 border border-primary/10" style={{ background: "linear-gradient(135deg, hsl(152 30% 95%), hsl(168 25% 92%))" }}>
         <h2 className="text-lg font-display font-semibold flex items-center gap-2">
           <Globe className="h-5 w-5 text-primary" /> Environmental Impact
         </h2>

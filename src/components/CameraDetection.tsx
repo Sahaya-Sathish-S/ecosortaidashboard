@@ -52,18 +52,36 @@ function speakResult(result: DetectionResult, credits: number, lang: Lang) {
       : `Detected ${result.wasteType} waste with ${result.confidence}% confidence. ${result.description}. You earned ${credits} green credits!`;
   }
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.9;
-  utterance.volume = 1;
-  utterance.pitch = 1;
-  const langCode = lang === "hi" ? "hi-IN" : lang === "ta" ? "ta-IN" : "en-US";
-  utterance.lang = langCode;
+  // Wait for voices to load, then speak
+  const doSpeak = () => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.volume = 1;
+    utterance.pitch = 1;
+    const langCode = lang === "hi" ? "hi-IN" : lang === "ta" ? "ta-IN" : "en-US";
+    utterance.lang = langCode;
+
+    const voices = window.speechSynthesis.getVoices();
+    const exact = voices.find((v) => v.lang === langCode);
+    const partial = voices.find((v) => v.lang.startsWith(langCode.split("-")[0]));
+    if (exact) utterance.voice = exact;
+    else if (partial) utterance.voice = partial;
+
+    window.speechSynthesis.speak(utterance);
+  };
 
   const voices = window.speechSynthesis.getVoices();
-  const match = voices.find((v) => v.lang === langCode) || voices.find((v) => v.lang.startsWith(langCode.split("-")[0]));
-  if (match) utterance.voice = match;
-
-  window.speechSynthesis.speak(utterance);
+  if (voices.length > 0) {
+    doSpeak();
+  } else {
+    // Voices not loaded yet, wait for them
+    window.speechSynthesis.onvoiceschanged = () => {
+      doSpeak();
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+    // Fallback: try anyway after a delay
+    setTimeout(doSpeak, 500);
+  }
 }
 
 // Preload voices
@@ -230,7 +248,7 @@ export function CameraDetection() {
         {result && (
           <div className="p-5 space-y-3 border-t">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl gradient-eco flex items-center justify-center shadow-md">
+              <div className="h-12 w-12 rounded-xl gradient-eco flex items-center justify-center shadow-md btn-glow">
                 <span className="text-2xl">{result.wasteType === "No Waste" ? "❌" : "♻️"}</span>
               </div>
               <div>

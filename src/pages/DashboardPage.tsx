@@ -76,7 +76,7 @@ export default function DashboardPage() {
       ) : (
         <>
           <div className="grid lg:grid-cols-2 gap-6">
-            <div className="bg-card rounded-xl p-5 shadow-card border">
+            <div className="bg-card/80 backdrop-blur rounded-xl p-5 shadow-card border hover:shadow-elevated transition-shadow">
               <h3 className="font-display font-semibold mb-4">Waste Type Distribution</h3>
               {wasteDistribution.length === 0 ? (
                 <HardwareNotice />
@@ -95,7 +95,7 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <div className="bg-card rounded-xl p-5 shadow-card border">
+            <div className="bg-card/80 backdrop-blur rounded-xl p-5 shadow-card border hover:shadow-elevated transition-shadow">
               <h3 className="font-display font-semibold mb-4">AI Detection Breakdown</h3>
               {detections.length === 0 ? (
                 <div className="text-center py-12 text-sm text-muted-foreground">No detections yet. Use the AI scanner to classify waste!</div>
@@ -116,7 +116,7 @@ export default function DashboardPage() {
           </div>
 
           {bins.length > 0 && (
-            <div className="bg-card rounded-xl p-5 shadow-card border">
+            <div className="bg-card/80 backdrop-blur rounded-xl p-5 shadow-card border hover:shadow-elevated transition-shadow">
               <h3 className="font-display font-semibold mb-4">Smart Bin Fill Levels</h3>
               <div className="space-y-3">
                 {bins.map((bin) => (

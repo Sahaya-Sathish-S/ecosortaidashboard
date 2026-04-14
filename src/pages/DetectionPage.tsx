@@ -22,7 +22,7 @@ export default function DetectionPage() {
   const latest = history[0];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 app-page-bg min-h-full">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-display font-bold">AI Waste Detection</h1>
@@ -32,39 +32,39 @@ export default function DetectionPage() {
       </div>
 
       {latest ? (
-        <motion.div className="bg-card rounded-xl p-6 shadow-card border" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div className="bg-card/80 backdrop-blur rounded-xl p-6 shadow-card border hover:shadow-elevated hover:border-primary/20 transition-all" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
             <Camera className="h-4 w-4 text-primary" />
             Latest Detection
           </h3>
           <div className="flex flex-col sm:flex-row gap-6 items-center">
-            <div className="w-40 h-40 rounded-2xl bg-muted flex items-center justify-center text-6xl">♻️</div>
+            <div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center text-6xl border border-primary/10">♻️</div>
             <div className="space-y-3 text-center sm:text-left">
               <div className="flex items-center gap-2 justify-center sm:justify-start">
                 <Brain className="h-5 w-5 text-primary" />
                 <span className="font-display font-bold text-xl">{latest.waste_type}</span>
               </div>
               <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <CheckCircle className="h-4 w-4 text-success" />
-                <span className="text-sm">Confidence: <strong>{latest.confidence}%</strong></span>
+                <CheckCircle className="h-4 w-4 text-primary" />
+                <span className="text-sm">Confidence: <strong className="text-primary">{latest.confidence}%</strong></span>
               </div>
               <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(latest.created_at), { addSuffix: true })}</p>
-              <div className="h-2 w-48 rounded-full bg-muted overflow-hidden">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${latest.confidence}%` }} />
+              <div className="h-2.5 w-48 rounded-full bg-muted overflow-hidden">
+                <div className="h-full rounded-full gradient-eco transition-all duration-700" style={{ width: `${latest.confidence}%` }} />
               </div>
             </div>
           </div>
         </motion.div>
       ) : (
-        <div className="bg-card rounded-xl p-12 shadow-card border text-center">
+        <div className="bg-card/80 backdrop-blur rounded-xl p-12 shadow-card border text-center">
           <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground">No detections yet. Use the camera to scan waste!</p>
         </div>
       )}
 
       {history.length > 0 && (
-        <div className="bg-card rounded-xl shadow-card border overflow-hidden">
-          <div className="p-5 border-b">
+        <div className="bg-card/80 backdrop-blur rounded-xl shadow-card border overflow-hidden hover:shadow-elevated transition-shadow">
+          <div className="p-5 border-b bg-gradient-to-r from-primary/5 to-accent/5">
             <h3 className="font-display font-semibold">Detection History</h3>
           </div>
           <Table>
@@ -77,7 +77,7 @@ export default function DetectionPage() {
             </TableHeader>
             <TableBody>
               {history.map((d) => (
-                <TableRow key={d.id}>
+                <TableRow key={d.id} className="hover:bg-primary/5 transition-colors">
                   <TableCell className="font-medium">{d.waste_type}</TableCell>
                   <TableCell>
                     <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
