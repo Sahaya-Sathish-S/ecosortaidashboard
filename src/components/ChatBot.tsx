@@ -37,7 +37,7 @@ export function ChatBotWidget() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full gradient-eco shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-110 transition-all duration-300 btn-glow"
+          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full gradient-eco shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-110 transition-all duration-300 btn-glow animate-float"
           aria-label="Open chat"
         >
           <MessageCircle className="h-6 w-6 text-primary-foreground" />
@@ -49,7 +49,7 @@ export function ChatBotWidget() {
 
 export function ChatPage() {
   return (
-    <div className="h-[calc(100vh-4rem)] p-4">
+    <div className="h-[calc(100vh-4rem)] p-4 app-page-bg">
       <ChatPanel fullPage />
     </div>
   );
@@ -67,6 +67,10 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const timerRef = useRef<any>(null);
+  const transcriptRef = useRef("");
+
+  // Keep transcriptRef in sync
+  useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -187,7 +191,9 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
           interim = t;
         }
       }
-      setTranscript((finalTranscript + interim).trim());
+      const combined = (finalTranscript + interim).trim();
+      setTranscript(combined);
+      transcriptRef.current = combined;
     };
 
     recognition.onerror = (e: any) => {
@@ -197,10 +203,11 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
     };
 
     recognition.onend = () => {
-      // Don't auto-restart — user will press stop
+      // Recognition ended — if still recording state, send whatever we have
     };
 
     recognitionRef.current = recognition;
+    transcriptRef.current = "";
     recognition.start();
     setRecording(true);
     setTranscript("");
@@ -209,23 +216,41 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
   const stopRecording = () => {
     recognitionRef.current?.stop();
     setRecording(false);
-    // Send the transcript
-    setTimeout(() => {
-      const text = transcript.trim();
-      if (text) send(text);
-      setTranscript("");
-    }, 300);
+
+    // Use ref to get the latest transcript value
+    const text = transcriptRef.current.trim();
+    if (text) {
+      // Small delay to let any final results come in
+      setTimeout(() => {
+        const finalText = transcriptRef.current.trim();
+        if (finalText) {
+          send(finalText);
+        }
+        setTranscript("");
+        transcriptRef.current = "";
+      }, 500);
+    } else {
+      // Wait a bit more in case results are still coming
+      setTimeout(() => {
+        const finalText = transcriptRef.current.trim();
+        if (finalText) {
+          send(finalText);
+        }
+        setTranscript("");
+        transcriptRef.current = "";
+      }, 1000);
+    }
   };
 
   const containerClass = floating
-    ? "fixed bottom-6 right-6 z-50 w-[400px] max-w-[calc(100vw-3rem)] h-[580px] rounded-2xl shadow-elevated border bg-card flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300"
-    : "w-full h-full rounded-2xl shadow-elevated border bg-card flex flex-col overflow-hidden";
+    ? "fixed bottom-6 right-6 z-50 w-[400px] max-w-[calc(100vw-3rem)] h-[580px] rounded-2xl shadow-elevated border bg-card/95 backdrop-blur-xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300"
+    : "w-full h-full rounded-2xl shadow-elevated border bg-card/95 backdrop-blur-xl flex flex-col overflow-hidden";
 
   return (
     <div className={containerClass}>
       <div className="flex items-center justify-between px-4 py-3 border-b gradient-eco">
         <div className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-xl bg-primary-foreground/20 backdrop-blur flex items-center justify-center">
+          <div className="h-9 w-9 rounded-xl bg-primary-foreground/20 backdrop-blur flex items-center justify-center animate-pulse-glow">
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
           <div>
@@ -257,14 +282,14 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
           <div className="text-center py-8">
-            <div className="h-16 w-16 rounded-2xl gradient-eco flex items-center justify-center mx-auto mb-3 shadow-lg shadow-primary/20">
+            <div className="h-16 w-16 rounded-2xl gradient-eco flex items-center justify-center mx-auto mb-3 shadow-lg shadow-primary/20 animate-float">
               <Sparkles className="h-7 w-7 text-primary-foreground" />
             </div>
             <p className="font-display font-bold text-base">Hi! I'm EcoSort Assistant 🌱</p>
             <p className="text-xs text-muted-foreground mt-1">Ask me anything about waste management, recycling, or green credits!</p>
             <div className="flex flex-wrap gap-2 justify-center mt-4">
               {["How do I earn green credits?", "Tips for recycling plastic", "What is EcoSort AI?"].map((q) => (
-                <button key={q} onClick={() => send(q)} className="text-[11px] px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20">
+                <button key={q} onClick={() => send(q)} className="text-[11px] px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-all hover:scale-105 border border-primary/20 btn-glow">
                   {q}
                 </button>
               ))}
@@ -277,7 +302,7 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
             <div className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm ${
               msg.role === "user"
                 ? "gradient-eco text-primary-foreground rounded-br-sm shadow-sm"
-                : "bg-muted rounded-bl-sm"
+                : "bg-muted/80 backdrop-blur rounded-bl-sm border border-border/50"
             }`}>
               {msg.role === "assistant" ? (
                 <div className="prose prose-sm prose-green max-w-none [&_p]:my-0.5 [&_ul]:my-1 [&_li]:my-0">
@@ -301,9 +326,9 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
         )}
       </div>
 
-      <div className="border-t p-3">
+      <div className="border-t p-3 bg-card/80 backdrop-blur">
         {recording && (
-          <div className="flex items-center gap-3 mb-2 px-3 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20">
+          <div className="flex items-center gap-3 mb-2 px-3 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20 animate-in fade-in-0 duration-200">
             <div className="h-3 w-3 rounded-full bg-destructive animate-pulse" />
             <div className="flex-1">
               <div className="flex items-center gap-2">
@@ -311,16 +336,14 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
                 <span className="text-[10px] text-muted-foreground">{LANG_LABELS[lang]}</span>
               </div>
               {transcript && (
-                <p className="text-xs text-foreground mt-1 italic truncate">"{transcript}"</p>
+                <p className="text-xs text-foreground mt-1 italic truncate max-w-[250px]">"{transcript}"</p>
               )}
             </div>
-            {/* Audio wave animation */}
             <div className="flex items-center gap-[2px] h-5">
               {[1,2,3,4,5].map((i) => (
-                <div key={i} className="w-[3px] bg-destructive rounded-full animate-pulse" style={{
-                  height: `${8 + Math.random() * 12}px`,
-                  animationDelay: `${i * 100}ms`,
-                  animationDuration: "0.6s",
+                <div key={i} className="w-[3px] bg-destructive rounded-full" style={{
+                  height: `${8 + Math.sin(Date.now() / 200 + i) * 6 + 6}px`,
+                  animation: `pulse ${0.4 + i * 0.1}s ease-in-out infinite alternate`,
                 }} />
               ))}
             </div>
@@ -331,7 +354,7 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
             <Button
               variant="destructive"
               size="icon"
-              className="h-10 w-10 flex-shrink-0 rounded-xl shadow-lg shadow-destructive/30 animate-pulse"
+              className="h-10 w-10 flex-shrink-0 rounded-xl shadow-lg shadow-destructive/30 animate-pulse hover:animate-none"
               onClick={stopRecording}
               title="Stop & Send"
             >
@@ -341,9 +364,9 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 flex-shrink-0 rounded-xl hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
+              className="h-10 w-10 flex-shrink-0 rounded-xl hover:bg-primary/10 hover:text-primary hover:border-primary/30 hover:shadow-md hover:shadow-primary/10 transition-all"
               onClick={startRecording}
-              title="Hold to record voice"
+              title="Record voice message"
             >
               <Mic className="h-4 w-4" />
             </Button>
@@ -353,12 +376,12 @@ function ChatPanel({ onClose, floating, fullPage }: { onClose?: () => void; floa
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !loading && send(input)}
             placeholder={recording ? "Listening..." : "Type a message..."}
-            className="h-10 text-sm rounded-xl border-border/50 focus-visible:ring-primary/30"
+            className="h-10 text-sm rounded-xl border-border/50 focus-visible:ring-primary/30 bg-background/50"
             disabled={recording}
           />
           <Button
             size="icon"
-            className="h-10 w-10 flex-shrink-0 rounded-xl gradient-eco border-0 text-primary-foreground shadow-sm hover:shadow-md hover:scale-105 transition-all"
+            className="h-10 w-10 flex-shrink-0 rounded-xl gradient-eco border-0 text-primary-foreground shadow-sm hover:shadow-md hover:shadow-primary/20 hover:scale-105 transition-all btn-glow"
             onClick={() => send(input)}
             disabled={loading || !input.trim()}
           >

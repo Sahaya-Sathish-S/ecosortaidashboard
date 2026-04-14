@@ -16,7 +16,7 @@ export default function MapPage() {
   }, []);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 app-page-bg min-h-full">
       <div>
         <h1 className="text-2xl font-display font-bold">Smart Map</h1>
         <p className="text-sm text-muted-foreground">Geographic overview of all smart bins</p>
@@ -35,7 +35,7 @@ export default function MapPage() {
         ))}
       </div>
 
-      <div className="bg-card rounded-xl shadow-card border overflow-hidden">
+      <div className="bg-card/80 backdrop-blur rounded-xl shadow-card border overflow-hidden hover:shadow-elevated transition-shadow">
         <div className="relative bg-gradient-to-br from-secondary/50 to-accent/30 h-[400px] flex items-center justify-center">
           <div className="absolute inset-0 opacity-10" style={{
             backgroundImage: "radial-gradient(circle, hsl(152 60% 36%) 1px, transparent 1px)",
