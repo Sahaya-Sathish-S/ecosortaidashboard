@@ -37,7 +37,7 @@ export default function MonitoringPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {bins.map((bin) => (
-            <div key={bin.id} className="bg-card rounded-xl p-5 shadow-card border space-y-3 hover:shadow-elevated transition-shadow">
+            <div key={bin.id} className="bg-card/80 backdrop-blur rounded-xl p-5 shadow-card border space-y-3 hover:shadow-elevated hover:border-primary/20 hover:scale-[1.02] transition-all">
               <div className="flex items-center justify-between">
                 <span className="font-display font-semibold text-sm">{bin.bin_id}</span>
                 <StatusBadge status={bin.status as "Full" | "Medium" | "Empty"} />
